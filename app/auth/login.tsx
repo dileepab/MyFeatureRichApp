@@ -1,11 +1,22 @@
-import React, { useState } from 'react';
+import React, {useEffect, useState} from 'react';
 import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
 import {router} from "expo-router";
+import {useAuth} from "@/app/context/AuthContext";
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isRemember] = useState(false);
   const [error, setError] = useState('');
+
+  const { login, isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    console.log(isAuthenticated);
+    if (isAuthenticated) {
+      router.replace('/(tabs)');
+    }
+  }, [isAuthenticated])
 
   const handleLogin = async () => {
     // Basic form validation
@@ -15,27 +26,40 @@ const LoginScreen = () => {
     }
 
     try {
-      // Simulate API call (replace with your actual API endpoint)
-      const response = await fetch('https://jsonplaceholder.typicode.com/posts', {
+      const response = await fetch('http://localhost:3001/authenticate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-
           email,
-          password
+          password,
+
+          isRemember // Assuming you have an 'isRemember' state variable
         })
       });
+      const jsonData = await response.json();
 
-      if (!response.ok) {
-        setError('Network response was not ok');
+      if (!response.ok) { // Check for any non-2xx status codes
+        setError(jsonData.message || 'Login failed');
+        return;
       }
 
-      router.replace('/(tabs)');
+      // Extract relevant data from the response
+      const userData = {
+        email: jsonData.email,
+        // Add other user details as needed
+      };
+      const authKey = jsonData.Token; // Use the actual token from the response
+
+      login(userData, authKey); // Call the login function from your context
 
     } catch (error) {
-      setError('Login failed. Please check your credentials.');
+      if (error instanceof Error) {
+        setError(error.message); // Display the error message to the user
+      } else {
+        setError('An unexpected error occurred.');
+      }
     }
   };
 
