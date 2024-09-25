@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
-import axios from 'axios';
 import {router} from "expo-router";
 
 const LoginScreen = () => {
@@ -17,15 +16,23 @@ const LoginScreen = () => {
 
     try {
       // Simulate API call (replace with your actual API endpoint)
-      const response = await axios.post('https://jsonplaceholder.typicode.com/posts', {
-        // Send email and password (adjust as needed for your API)
-        email,
-        password,
+      const response = await fetch('https://jsonplaceholder.typicode.com/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+
+          email,
+          password
+        })
       });
 
-      if(response.status === 201) {
-        router.replace('/(tabs)');
+      if (!response.ok) {
+        setError('Network response was not ok');
       }
+
+      router.replace('/(tabs)');
 
     } catch (error) {
       setError('Login failed. Please check your credentials.');
