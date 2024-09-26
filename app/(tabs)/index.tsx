@@ -9,8 +9,6 @@ import {useAuth} from "@/app/context/AuthContext";
 
 export default function HomeScreen() {
   const { user, authKey, logout, isAuthenticated } = useAuth();
-
-  const [homeData, setHomeData] = useState(null); // State to store home data
   const [loading, setLoading] = useState(true);  // State for loading status
   const [error, setError] = useState<string | null>(null); // State for error handling
 
@@ -37,7 +35,7 @@ export default function HomeScreen() {
           setError('Failed to fetch home data.');
         }
         const data = await response.json();
-        setHomeData(data);  // Set the fetched data to state
+        console.log(data);
       } catch (err) {
         setError('Failed to load home data.');
       } finally {
@@ -67,9 +65,6 @@ export default function HomeScreen() {
       <ThemedView style={styles.titleContainer}>
         <ThemedText type="subtitle">Welcome! {user?.email}</ThemedText>
         <HelloWave />
-        <ThemedText type="default" >
-          {JSON.stringify(homeData)}
-        </ThemedText>
       </ThemedView>
     </ParallaxScrollView>
   );
