@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 interface AuthContextType {
   isAuthenticated: boolean;
   user: any | null; // Adjust 'any' to match your user data structure
+  authKey: any | null; // Adjust 'any' to match your user data structure
   login: (userData: any, authKey: string) => void;
   logout: () => void;
 }
@@ -13,29 +14,31 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<any | null>(null);
+  const [authKey, setAuthKey] = useState('');
 
   useEffect(() => {
-    // Check for existing authKey on app load
-    const checkAuthStatus = async () => {
-      const storedAuthKey = await AsyncStorage.getItem('authKey');
-      console.log(storedAuthKey);
-      if (storedAuthKey) {
-        setIsAuthenticated(true);
-        const user = await AsyncStorage.getItem('user');
-        if (typeof user === "string") {
-          setUser(JSON.parse(user));
-        }
+  const checkAuthStatus = async () => {
+    const storedAuthKey = await AsyncStorage.getItem('authKey');
+    if (storedAuthKey) {
+      setAuthKey(storedAuthKey);
+      setIsAuthenticated(true);
+      const storedUser = await AsyncStorage.getItem('user');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser)); // Parse JSON string back to an object
       }
-    };
-    checkAuthStatus();
-  }, []);
+    }
+  };
+  checkAuthStatus();
+}, []);
+
 
   const login = async (userData: any, authKey: string) => {
     try {
       await AsyncStorage.setItem('authKey', authKey);
-      await AsyncStorage.setItem('user', userData.toString());
-      setIsAuthenticated(true);
+      await AsyncStorage.setItem('user', JSON.stringify(userData));
+      setAuthKey(authKey);
       setUser(userData);
+      setIsAuthenticated(true);
     } catch (error) {
       console.error('Error storing authKey:', error);
     }
@@ -53,7 +56,7 @@ export const AuthProvider: FC<React.PropsWithChildren<unknown>> = ({ children })
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, authKey, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

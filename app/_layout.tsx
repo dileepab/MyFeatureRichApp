@@ -6,10 +6,30 @@ import {useEffect} from 'react';
 import 'react-native-reanimated';
 
 import {useColorScheme} from '@/hooks/useColorScheme';
-import {AuthProvider} from "@/app/context/AuthContext";
+import {AuthProvider, useAuth} from "@/app/context/AuthContext";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
+
+function AppRoutes() {
+  const { isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace('/(tabs)');
+    } else {
+      router.replace('/auth/login');
+    }
+  }, [isAuthenticated]);
+
+  return (
+    <Stack>
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="auth" options={{ headerShown: false }} />
+      <Stack.Screen name="+not-found" />
+    </Stack>
+  );
+}
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -19,10 +39,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (loaded) {
-      router.replace('/auth/login');
-      setTimeout(() => {
-        SplashScreen.hideAsync();
-      }, 1000)
+      SplashScreen.hideAsync();
     }
   }, [loaded]);
 
@@ -33,11 +50,7 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <Stack>
-          <Stack.Screen name="auth" options={{headerShown: false}}/>
-          <Stack.Screen name="(tabs)" options={{headerShown: false}}/>
-          <Stack.Screen name="+not-found"/>
-        </Stack>
+        <AppRoutes />
       </ThemeProvider>
     </AuthProvider>
   );

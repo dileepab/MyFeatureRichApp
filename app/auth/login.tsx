@@ -1,27 +1,52 @@
-import React, {useEffect, useState} from 'react';
-import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
-import {router} from "expo-router";
+import React, {useState} from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+} from "react-native";
+import { MaterialCommunityIcons, Feather } from "@expo/vector-icons";
 import {useAuth} from "@/app/context/AuthContext";
+import {ThemedView} from "@/components/ThemedView";
+import {ThemedTextInput} from "@/components/ThemedTextInput";
+import {useThemeColor} from "@/hooks/useThemeColor";
+import {ThemedText} from "@/components/ThemedText";
 
 const LoginScreen = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isRemember] = useState(false);
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isEmailFocused, setIsEmailFocused] = useState(false);
+  const [isPasswordWrapperFocused, setIsPasswordWrapperFocused] =
+    useState(false); // Focus state for password wrapper
 
-  const { login, isAuthenticated } = useAuth();
+  const color = useThemeColor( {},'icon');
+  const borderColor = useThemeColor({}, 'inputBorder');
 
-  useEffect(() => {
-    console.log(isAuthenticated);
-    if (isAuthenticated) {
-      router.replace('/(tabs)');
-    }
-  }, [isAuthenticated])
+  const { login } = useAuth();
 
   const handleLogin = async () => {
+    // Clear any previous error messages
+    setError("");
     // Basic form validation
     if (!email || !password) {
-      setError('Please fill in all fields.');
+      setError("Please fill in all fields.");
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    // Validate password length
+    if (password.length <= 3) {
+      setError("Password must be more than 3 characters.");
       return;
     }
 
@@ -34,8 +59,7 @@ const LoginScreen = () => {
         body: JSON.stringify({
           email,
           password,
-
-          isRemember // Assuming you have an 'isRemember' state variable
+          rememberMe // Assuming you have an 'isRemember' state variable
         })
       });
       const jsonData = await response.json();
@@ -47,7 +71,7 @@ const LoginScreen = () => {
 
       // Extract relevant data from the response
       const userData = {
-        email: jsonData.email,
+        email: email,
         // Add other user details as needed
       };
       const authKey = jsonData.Token; // Use the actual token from the response
@@ -63,46 +87,162 @@ const LoginScreen = () => {
     }
   };
 
+  const toggleRememberMe = () => {
+    setRememberMe(!rememberMe);
+  };
+
+  const togglePasswordVisibility = () => {
+    setIsPasswordVisible(!isPasswordVisible);
+  };
+
   return (
-    <View style={styles.container}>
-      <Text>Login</Text>
-      <TextInput
+    <ThemedView style={styles.container}>
+      {/* logo */}
+      <Image
+        source={require("../../assets/images/alfresco.png")}
+        style={styles.logo}
+      />
+      <ThemedText type={'title'} style={styles.title}>Welcome</ThemedText>
+
+      <ThemedView
+        style={[
+          styles.inputWrapper,
+          isEmailFocused && styles.focusedWrapper,
+        ]}
+      >
+      <ThemedTextInput
         placeholder="Email"
         value={email}
         onChangeText={setEmail}
-        style={styles.input}
+        onFocus={() => setIsEmailFocused(true)}
+        onBlur={() => setIsEmailFocused(false)}
+        keyboardType="email-address"
+        autoCapitalize="none"
+        autoFocus={true}
       />
-      <TextInput
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        style={styles.input}
-      />
+      </ThemedView>
+
+      <ThemedView
+        style={[
+          styles.inputWrapper,
+          isPasswordWrapperFocused && styles.focusedWrapper,
+        ]}
+      >
+        <ThemedTextInput
+          placeholder="Password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry={!isPasswordVisible}
+          onFocus={() => setIsPasswordWrapperFocused(true)}
+          onBlur={() => setIsPasswordWrapperFocused(false)}
+        />
+        <TouchableOpacity
+          onPress={togglePasswordVisibility}
+          style={styles.iconContainer}
+        >
+          <Feather
+            name={isPasswordVisible ? "eye-off" : "eye"}
+            size={16}
+            color={color}
+          />
+        </TouchableOpacity>
+      </ThemedView>
+
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Button title="Login" onPress={handleLogin} />
-    </View>
+
+      <View style={styles.rememberMeContainer}>
+        <TouchableOpacity onPress={toggleRememberMe}>
+          <MaterialCommunityIcons
+            name={rememberMe ? "checkbox-outline" : "checkbox-blank-outline"}
+            size={24}
+            color={borderColor}
+          />
+        </TouchableOpacity>
+        <ThemedText onPress={toggleRememberMe}>
+          Remember Me
+        </ThemedText>
+      </View>
+
+      <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
+        <Text style={styles.loginButtonText}>Login</Text>
+      </TouchableOpacity>
+    </ThemedView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 25,
   },
-  input: {
-    width: '100%',
-    height: 40,
-    borderColor: 'gray',
+  logo: {
+    width: 100,
+    height: 100,
+    marginBottom: 20,
+  },
+  title: {
+    marginBottom: 20,
+  },
+  inputWrapper: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    borderColor: "#ccc",
     borderWidth: 1,
+    borderRadius: 5,
     marginBottom: 10,
-    padding: 10,
+    height: 42,
+    overflow: 'hidden',
+  },
+  focusedWrapper: {
+    borderColor: "#2596be",
+    borderWidth: 1,
+  },
+  iconContainer: {
+    height: 50,
+    paddingHorizontal: 15,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  focusedInput: {
+    borderColor: "#2596be",
+    borderWidth: 1,
   },
   error: {
-    color: 'red',
+    color: "red",
+    fontSize: 14,
     marginBottom: 10,
+    textAlign: "center",
+    width: "100%",
+  },
+  rememberMeContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+    marginBottom: 20,
+    gap: 8,
+    marginLeft: 3,
+    alignSelf: "flex-start",
+  },
+  rememberMeText: {
+    fontSize: 16,
+    color: "#333",
+    marginLeft: 5,
+  },
+  loginButton: {
+    width: "100%",
+    backgroundColor: "#2596be",
+    padding: 14,
+    alignItems: "center",
+    borderRadius: 5,
+    marginTop: 5,
+  },
+  loginButtonText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
   },
 });
 

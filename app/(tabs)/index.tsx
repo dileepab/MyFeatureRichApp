@@ -1,11 +1,60 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import {ActivityIndicator, Image, StyleSheet} from 'react-native';
 
 import { HelloWave } from '@/components/HelloWave';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import React, {useEffect, useState} from "react";
+import {useAuth} from "@/app/context/AuthContext";
 
 export default function HomeScreen() {
+  const { user, authKey, logout, isAuthenticated } = useAuth();
+
+  const [homeData, setHomeData] = useState(null); // State to store home data
+  const [loading, setLoading] = useState(true);  // State for loading status
+  const [error, setError] = useState<string | null>(null); // State for error handling
+
+  useEffect(() => {
+    if(!isAuthenticated) {
+      return;
+    }
+    const fetchData = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/home-data',{
+          method: 'GET',
+            headers: {
+            'Content-Type': 'application/json',
+              'Authorization': `Bearer ${authKey}`,  // Pass token in the header
+          },
+        }); // Example API endpoint
+        if (response.status === 401 || response.status === 403) {  // Handle token expiration or incorrect token
+          console.log("Token expired or invalid. Logging out...");
+          logout();  // Trigger the logout function
+          return;
+        }
+
+        if (!response.ok) {
+          setError('Failed to fetch home data.');
+        }
+        const data = await response.json();
+        setHomeData(data);  // Set the fetched data to state
+      } catch (err) {
+        setError('Failed to load home data.');
+      } finally {
+        setLoading(false); // Set loading to false after fetching
+      }
+    };
+
+    fetchData();
+  }, [isAuthenticated]);  // Empty dependency array to ensure it runs once when the component mounts
+
+  if (loading) {
+    return <ActivityIndicator size="large" color="#2596be" />; // Show loading spinner
+  }
+
+  if (error) {
+    return <ThemedText type="default" style={styles.errorText}>{error}</ThemedText>; // Show error message
+  }
   return (
     <ParallaxScrollView
       headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
@@ -16,34 +65,10 @@ export default function HomeScreen() {
         />
       }>
       <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
+        <ThemedText type="subtitle">Welcome! {user?.email}</ThemedText>
         <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({ ios: 'cmd + d', android: 'cmd + m' })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
+        <ThemedText type="default" >
+          {JSON.stringify(homeData)}
         </ThemedText>
       </ThemedView>
     </ParallaxScrollView>
@@ -56,15 +81,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
   reactLogo: {
     height: 178,
     width: 290,
     bottom: 0,
     left: 0,
     position: 'absolute',
+  },
+  errorText: {
+    color: 'red',
+    textAlign: 'center',
+    marginTop: 20,
   },
 });
